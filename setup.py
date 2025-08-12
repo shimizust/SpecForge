@@ -3,7 +3,9 @@ from setuptools import find_packages, setup
 
 def read_requirements():
     with open(f"requirements.txt", "r") as f:
-        return f.read().splitlines()
+        lines = f.read().splitlines()
+        # Filter out pip options and comments
+        return [line for line in lines if not line.startswith('--') and not line.startswith('#') and line.strip()]
 
 
 def read_readme():
