@@ -112,13 +112,14 @@ import hashlib
 
 def process_opc_sft_stage1(row) -> Dict:
     row_id = hashlib.md5((row["instruction"] + row["output"]).encode()).hexdigest()
-    return {
+    processed_row = {
         "id": row_id,
         "conversations": [
             {"role": "user", "content": row["instruction"]},
             {"role": "assistant", "content": row["output"]},
         ],
     }
+    return processed_row, 0
 
 
 def main():
