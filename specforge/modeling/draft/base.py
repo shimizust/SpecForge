@@ -127,7 +127,8 @@ class Eagle3DraftModel(PreTrainedModel, ABC):
         Load the embedding of the draft model.
 
         Args:
-            model_path (str): The path to the huggingface repository.
+            model_path (str): Path to the target model. Can be either a Hugging Face 
+            repository ID or a local directory path containing the model files.
         """
         if os.path.exists(model_path):
             # model_path is a local directory
@@ -136,7 +137,19 @@ class Eagle3DraftModel(PreTrainedModel, ABC):
             index_json_path = glob.glob(glob_path)
 
             if len(index_json_path) == 0:
-                raise FileNotFoundError(f"No index.json file found in {model_path}")
+                # No index.json found, look for single model file
+                safetensors_path = os.path.join(model_path, "model.safetensors")
+
+                if os.path.exists(safetensors_path):
+                    # Load from single safetensors file
+                    with safe_open(safetensors_path, framework="pt") as f:
+                        emb_tokens = f.get_tensor(embedding_key)
+                    self.embed_tokens.weight.copy_(emb_tokens)
+                    return
+                else:
+                    raise FileNotFoundError(
+                        f"No index.json, model.safetensors found in {model_path}"
+                    )
             if len(index_json_path) > 1:
                 raise FileNotFoundError(
                     f"Multiple index.json files found in {model_path}"
