@@ -150,7 +150,9 @@ class Eagle3DraftModel(PreTrainedModel, ABC):
                     self.embed_tokens.weight.copy_(state_dict[embedding_key])
                     return
 
-                raise FileNotFoundError(f"No index.json, model.safetensors or pytorch_model.bin found in {model_path}")
+                raise FileNotFoundError(
+                    f"No index.json, model.safetensors or pytorch_model.bin found in {model_path}"
+                )
             if len(index_json_path) > 1:
                 raise FileNotFoundError(
                     f"Multiple index.json files found in {model_path}"
