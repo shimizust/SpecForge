@@ -127,7 +127,7 @@ class Eagle3DraftModel(PreTrainedModel, ABC):
         Load the embedding of the draft model.
 
         Args:
-            model_path (str): Path to the target model. Can be either a Hugging Face 
+            model_path (str): Path to the target model. Can be either a Hugging Face
             repository ID or a local directory path containing the model files.
         """
         if os.path.exists(model_path):
