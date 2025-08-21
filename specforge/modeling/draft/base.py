@@ -127,7 +127,7 @@ class Eagle3DraftModel(PreTrainedModel, ABC):
         Load the embedding of the draft model.
 
         Args:
-            model_path (str): Path to the target model. Can be either a Hugging Face 
+            model_path (str): Path to the target model. Can be either a Hugging Face
             repository ID or a local directory path containing the model files.
         """
         if os.path.exists(model_path):
@@ -139,17 +139,20 @@ class Eagle3DraftModel(PreTrainedModel, ABC):
             if len(index_json_path) == 0:
                 # No index.json found, look for single model file
                 safetensors_path = os.path.join(model_path, "model.safetensors")
-
                 if os.path.exists(safetensors_path):
-                    # Load from single safetensors file
                     with safe_open(safetensors_path, framework="pt") as f:
-                        emb_tokens = f.get_tensor(embedding_key)
-                    self.embed_tokens.weight.copy_(emb_tokens)
+                        self.embed_tokens.weight.copy_(f.get_tensor(embedding_key))
                     return
-                else:
-                    raise FileNotFoundError(
-                        f"No index.json, model.safetensors found in {model_path}"
-                    )
+
+                pytorch_model_path = os.path.join(model_path, "pytorch_model.bin")
+                if os.path.exists(pytorch_model_path):
+                    state_dict = torch.load(pytorch_model_path, map_location="cpu")
+                    self.embed_tokens.weight.copy_(state_dict[embedding_key])
+                    return
+
+                raise FileNotFoundError(
+                    f"No index.json, model.safetensors or pytorch_model.bin found in {model_path}"
+                )
             if len(index_json_path) > 1:
                 raise FileNotFoundError(
                     f"Multiple index.json files found in {model_path}"
