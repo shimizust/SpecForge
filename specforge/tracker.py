@@ -239,10 +239,18 @@ class MLflowTracker(Tracker):
             parser.error(
                 "To use --report-to mlflow, you must install mlflow: 'pip install mlflow'"
             )
-        if args.mlflow_tracking_uri is None and "MLFLOW_TRACKING_URI" not in os.environ:
+        
+        # Set tracking URI from environment variable if not explicitly provided
+        if args.mlflow_tracking_uri is None and "MLFLOW_TRACKING_URI" in os.environ:
+            args.mlflow_tracking_uri = os.environ["MLFLOW_TRACKING_URI"]
+        elif args.mlflow_tracking_uri is None:
             print(
                 "Warning: MLflow tracking URI not set. Defaulting to local './mlruns'."
             )
+        
+        # Set experiment name from environment variable if not explicitly provided
+        if args.mlflow_experiment_name is None and "MLFLOW_EXPERIMENT_NAME" in os.environ:
+            args.mlflow_experiment_name = os.environ["MLFLOW_EXPERIMENT_NAME"]
 
     def __init__(self, args, output_dir: str):
         super().__init__(args, output_dir)
