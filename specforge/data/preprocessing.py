@@ -33,7 +33,6 @@ from transformers import ImageProcessingMixin, PreTrainedTokenizer
 
 try:
     from qwen_vl_utils import process_vision_info
-
     HAS_QWEN_VL_UTILS = True
 except ImportError:
     HAS_QWEN_VL_UTILS = False
@@ -144,6 +143,58 @@ def preprocess_conversations(
         results["input_ids"].append(input_ids[None, :])
         results["loss_mask"].append(loss_mask[None, :])
         results["attention_mask"].append(torch.ones_like(loss_mask)[None, :])
+    return results
+
+
+def preprocess_preformatted_text(
+    tokenizer: PreTrainedTokenizer,
+    texts: List[str],
+    max_length: int = 2048,
+) -> Dict[str, List[torch.Tensor]]:
+    """
+    Preprocess a batch of pre-formatted text strings (already formatted with chat template).
+
+    Args:
+        tokenizer: The tokenizer to use for tokenization.
+        texts: A list of text strings that are already formatted with chat templates.
+        max_length: The maximum length of the tokenized input.
+
+    Returns:
+        A dictionary containing:
+            - input_ids: List of tokenized input IDs.
+            - loss_mask: List of loss masks (all ones since we want to train on all tokens).
+            - attention_mask: List of attention masks.
+    """
+    # prepare result
+    results = {"input_ids": [], "loss_mask": [], "attention_mask": []}
+
+    if not tokenizer.pad_token_id:
+        tokenizer.pad_token_id = tokenizer.unk_token_id
+
+    for text in texts:
+        if not text:
+            # if the text is None or empty, skip it
+            continue
+
+        encoding = tokenizer(
+            text,
+            max_length=max_length,
+            truncation=True,
+            return_tensors="pt",
+            add_special_tokens=False,
+        )
+        input_ids = encoding.input_ids[0]
+        
+        # For pre-formatted text, we typically want to train on all tokens
+        # except the last one (next token prediction)
+        loss_mask = torch.ones(len(input_ids), dtype=torch.long)
+        if len(loss_mask) > 0:
+            loss_mask[-1] = 0  # Don't compute loss on the last token
+
+        results["input_ids"].append(input_ids[None, :])
+        results["loss_mask"].append(loss_mask[None, :])
+        results["attention_mask"].append(torch.ones_like(loss_mask)[None, :])
+    
     return results
 
 
@@ -290,7 +341,7 @@ def preprocess_vlm_conversations(
 def build_eagle3_dataset(
     dataset: HFDataset,
     tokenizer: PreTrainedTokenizer,
-    chat_template: str,
+    chat_template: Optional[str] = None,
     max_length: Optional[int] = 2048,
     shuffle_seed: Optional[int] = 42,
     num_proc: Optional[int] = 8,
@@ -298,6 +349,7 @@ def build_eagle3_dataset(
     cache_key: Optional[str] = None,
     is_vlm: Optional[bool] = False,
     processor: Optional[ImageProcessingMixin] = None,
+    is_preformatted: Optional[bool] = False,
 ) -> HFDataset:
     """
     build eagle3 dataset
@@ -305,7 +357,8 @@ def build_eagle3_dataset(
     Args:
         dataset: HF dataset to process.
         tokenizer: The tokenizer to use for tokenization.
-        chat_template: The chat template to use for formatting the conversations.
+        chat_template: The chat template to use for formatting conversations. 
+                      Required when is_preformatted=False and is_vlm=False.
         max_length: The maximum length of the tokenized input.
         shuffle_seed: The seed for shuffling the dataset.
         num_proc: The number of processes to use for multiprocessing.
@@ -313,23 +366,39 @@ def build_eagle3_dataset(
         cache_key: The key to use for caching the processed dataset.
         is_vlm: Whether the dataset is for VLM models.
         processor: The image processor to use for processing images.
+        is_preformatted: Whether the dataset contains pre-formatted text that doesn't need chat templates.
+                        If True, expects "text" or "content" column with ready-to-train text.
+                        If False, expects "conversations" column with ShareGPT format.
 
     Returns:
         The processed HF dataset.
     """
     if is_vlm:
         assert processor is not None, "processor must be provided when is_vlm is True"
-    # Get chat template
-    assert (
-        chat_template in TEMPLATE_REGISTRY.get_all_template_names()
-    ), f"Chat template {chat_template} not found in TEMPLATE_REGISTRY, you may need to register it first"
-    template: ChatTemplate = TEMPLATE_REGISTRY.get(chat_template)
+    
+    # Validate chat_template requirement
+    if not is_preformatted and not is_vlm:
+        if chat_template is None:
+            raise ValueError("chat_template must be provided when is_preformatted=False and is_vlm=False")
+        assert (
+            chat_template in TEMPLATE_REGISTRY.get_all_template_names()
+        ), f"Chat template {chat_template} not found in TEMPLATE_REGISTRY, you may need to register it first"
+        template: ChatTemplate = TEMPLATE_REGISTRY.get(chat_template)
+    elif is_vlm:
+        if chat_template is None:
+            raise ValueError("chat_template must be provided when is_vlm=True")
+        assert (
+            chat_template in TEMPLATE_REGISTRY.get_all_template_names()
+        ), f"Chat template {chat_template} not found in TEMPLATE_REGISTRY, you may need to register it first"
+        template: ChatTemplate = TEMPLATE_REGISTRY.get(chat_template)
+    else:
+        template = None
 
     dataset = dataset.shuffle(seed=shuffle_seed)
     original_cols = dataset.column_names
 
     def preprocess_function(examples):
-        # Always do preprocessing
+        # Handle different dataset formats
         if is_vlm:
             processed = preprocess_vlm_conversations(
                 processor,
@@ -337,13 +406,27 @@ def build_eagle3_dataset(
                 template,
                 max_length,
             )
+        elif is_preformatted:
+            # Handle pre-formatted text (could be in "text" or "content" column)
+            text_column = "text" if "text" in examples else "content"
+            if text_column not in examples:
+                raise ValueError(f"Expected 'text' or 'content' column for is_preformatted=True, but found columns: {list(examples.keys())}")
+            processed = preprocess_preformatted_text(
+                tokenizer,
+                examples[text_column],
+                max_length,
+            )
         else:
+            # Handle ShareGPT conversations
+            if "conversations" not in examples:
+                raise ValueError(f"Expected 'conversations' column for is_preformatted=False, but found columns: {list(examples.keys())}")
             processed = preprocess_conversations(
                 tokenizer,
                 examples["conversations"],
                 template,
                 max_length,
             )
+        
         return processed
 
     # Process dataset only once
@@ -361,11 +444,13 @@ def build_eagle3_dataset(
             f"cache_dir and cache_key must be provided together to make caching work"
         )
 
-    # reduce batch size for VLM datasets to avoid PyArrow offset overflow
+    # adjust batch size based on dataset type
     if is_vlm:
-        batch_size = 200
+        batch_size = 200  # reduce batch size for VLM datasets to avoid PyArrow offset overflow
+    elif is_preformatted:
+        batch_size = 2000  # pre-formatted text can handle larger batches
     else:
-        batch_size = 1000
+        batch_size = 1000  # default for conversations
     dataset = dataset.map(
         preprocess_function,
         batched=True,
