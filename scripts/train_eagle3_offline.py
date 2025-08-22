@@ -56,6 +56,12 @@ def parse_args():
     parser.add_argument("--max-length", type=int, default=2048)
     parser.add_argument("--warmup-ratio", type=float, default=0.02)
     parser.add_argument(
+        "--log-steps", 
+        type=int, 
+        default=50, 
+        help="Log training metrics every N steps"
+    )
+    parser.add_argument(
         "--ttt-length",
         type=int,
         default=7,
@@ -341,13 +347,15 @@ def main():
             scheduler.step()
             global_step += 1
 
-            logdict = {"train/lr": optimizer.param_groups[0]["lr"]}
-            for i in range(len(plosses)):
-                logdict[f"train/ploss_{i}"] = plosses[i].item()
-            for i in range(len(acces)):
-                logdict[f"train/acc_{i}"] = acces[i]
-            # Pass global_step to the tracker
-            tracker.log(logdict, step=global_step)
+            # Log only every log_steps steps
+            if global_step % args.log_steps == 0:
+                logdict = {"train/lr": optimizer.param_groups[0]["lr"]}
+                for i in range(len(plosses)):
+                    logdict[f"train/ploss_{i}"] = plosses[i].item()
+                for i in range(len(acces)):
+                    logdict[f"train/acc_{i}"] = acces[i]
+                # Pass global_step to the tracker
+                tracker.log(logdict, step=global_step)
 
             epoch_acces = [epoch_acces[i] + [acces[i]] for i in range(len(acces))]
             epoch_plosses = [
