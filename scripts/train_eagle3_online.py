@@ -125,7 +125,7 @@ def parse_args():
     parser.add_argument(
         "--mlflow-experiment-name",
         type=str,
-        default="default",
+        default=None,
         help="The MLflow experiment name.",
     )
     parser.add_argument(
