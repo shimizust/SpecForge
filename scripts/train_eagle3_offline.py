@@ -89,7 +89,7 @@ def parse_args():
         "--report-to",
         type=str,
         default="none",
-        choices=["wandb", "tensorboard", "swanlab", "none"],
+        choices=["wandb", "tensorboard", "swanlab", "mlflow", "none"],
         help="The integration to report results and logs to.",
     )
     # wandb-specific args
