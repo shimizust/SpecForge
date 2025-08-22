@@ -230,9 +230,8 @@ class TensorboardTracker(Tracker):
             self.is_initialized = False
 
 
-# --- Placeholder for MLflow ---
 class MLflowTracker(Tracker):
-    """Tracks experiments using MLflow. (Example Implementation)"""
+    """Tracks experiments using MLflow."""
 
     @classmethod
     def validate_args(cls, parser, args):
@@ -274,7 +273,7 @@ TRACKER_REGISTRY = {
     "wandb": WandbTracker,
     "swanlab": SwanlabTracker,
     "tensorboard": TensorboardTracker,
-    "mlflow": MLflowTracker,  # Ready for future use
+    "mlflow": MLflowTracker,
     "none": NoOpTracker,
 }
 
