@@ -33,6 +33,7 @@ from transformers import ImageProcessingMixin, PreTrainedTokenizer
 
 try:
     from qwen_vl_utils import process_vision_info
+
     HAS_QWEN_VL_UTILS = True
 except ImportError:
     HAS_QWEN_VL_UTILS = False
@@ -536,9 +537,11 @@ def process_token_dict_to_mappings(
     total_frequency = sum(token_dict.values())
     top_N = token_dict.most_common(draft_vocab_size)
     top_N_frequency_sum = sum(freq for key, freq in top_N)
-    
+
     if total_frequency == 0:
-        print("Warning: Total token frequency is zero. All tokens will have zero ratio.")
+        print(
+            "Warning: Total token frequency is zero. All tokens will have zero ratio."
+        )
         top_N_ratio = 0.0
     else:
         top_N_ratio = top_N_frequency_sum / total_frequency

@@ -55,10 +55,7 @@ def parse_args():
     parser.add_argument("--max-length", type=int, default=2048)
     parser.add_argument("--warmup-ratio", type=float, default=0.02)
     parser.add_argument(
-        "--log-steps", 
-        type=int, 
-        default=50, 
-        help="Log training metrics every N steps"
+        "--log-steps", type=int, default=50, help="Log training metrics every N steps"
     )
     parser.add_argument(
         "--ttt-length",
