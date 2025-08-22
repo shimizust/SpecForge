@@ -28,9 +28,15 @@ from typing import Dict, List, Optional, Tuple
 
 import torch
 from datasets import Dataset as HFDataset
-from qwen_vl_utils import process_vision_info
 from tqdm import tqdm
 from transformers import ImageProcessingMixin, PreTrainedTokenizer
+
+try:
+    from qwen_vl_utils import process_vision_info
+    HAS_QWEN_VL_UTILS = True
+except ImportError:
+    HAS_QWEN_VL_UTILS = False
+    process_vision_info = None
 
 from specforge.utils import padding
 
@@ -221,6 +227,11 @@ def preprocess_vlm_conversations(
             add_generation_prompt=False,
         )
         # get vision infor use qwen_vl_utils
+        if not HAS_QWEN_VL_UTILS:
+            raise ImportError(
+                "qwen_vl_utils is required for VLM preprocessing but is not installed. "
+                "Please install it to use VLM features."
+            )
         image_inputs, video_inputs = process_vision_info(messages)
         assert image_inputs is not None, "image_inputs must not be None"
 
