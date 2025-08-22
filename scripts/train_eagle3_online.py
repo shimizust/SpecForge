@@ -126,13 +126,13 @@ def parse_args():
         "--mlflow-tracking-uri",
         type=str,
         default=None,
-        help="The MLflow tracking URI. If not set, defaults to local './mlruns'.",
+        help="The MLflow tracking URI. If not set, uses MLFLOW_TRACKING_URI environment variable or defaults to local './mlruns'.",
     )
     parser.add_argument(
         "--mlflow-experiment-name",
         type=str,
         default=None,
-        help="The MLflow experiment name.",
+        help="The MLflow experiment name. If not set, uses MLFLOW_EXPERIMENT_NAME environment variable.",
     )
     parser.add_argument(
         "--mlflow-run-name",
