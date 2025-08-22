@@ -118,6 +118,25 @@ def parse_args():
         default=None,
         help="The API key for swanlab non-interactive login.",
     )
+    # mlflow-specific args
+    parser.add_argument(
+        "--mlflow-tracking-uri",
+        type=str,
+        default=None,
+        help="The MLflow tracking URI. If not set, defaults to local './mlruns'.",
+    )
+    parser.add_argument(
+        "--mlflow-experiment-name",
+        type=str,
+        default="default",
+        help="The MLflow experiment name.",
+    )
+    parser.add_argument(
+        "--mlflow-run-name",
+        type=str,
+        default=None,
+        help="The MLflow run name. If not set, MLflow will auto-generate one.",
+    )
 
     args = parser.parse_args()
 
