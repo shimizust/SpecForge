@@ -531,11 +531,17 @@ def process_token_dict_to_mappings(
             token_dict[token] = 0
             if len(token_dict) >= draft_vocab_size:
                 break
-
+    print(f"Added missing tokens to reach draft vocab size: {draft_vocab_size}")
+    print(f"Total tokens after addition: {len(token_dict)}")
     total_frequency = sum(token_dict.values())
     top_N = token_dict.most_common(draft_vocab_size)
     top_N_frequency_sum = sum(freq for key, freq in top_N)
-    top_N_ratio = top_N_frequency_sum / total_frequency
+    
+    if total_frequency == 0:
+        print("Warning: Total token frequency is zero. All tokens will have zero ratio.")
+        top_N_ratio = 0.0
+    else:
+        top_N_ratio = top_N_frequency_sum / total_frequency
 
     print(f"top {draft_vocab_size} token frequency ratio: {top_N_ratio:.2%}")
     used_tokens = [key for key, freq in top_N]
