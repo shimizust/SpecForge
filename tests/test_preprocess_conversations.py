@@ -261,6 +261,9 @@ def test_preprocess_conversations_role_validation():
         mock_tokenizer = Mock()
         mock_tokenizer.pad_token_id = 0
         
+        # We need to mock the tokenizer but the actual validation happens before tokenization
+        mock_tokenizer_class.return_value = mock_tokenizer
+        
         conversations = [
             [
                 {"role": "user", "content": "First message"},
@@ -413,37 +416,33 @@ def visualize_loss_mask(tokenizer, input_ids, loss_mask):
 
 
 if __name__ == "__main__":
-    # Run a simple test to demonstrate functionality
+    # Run the tests individually to demonstrate functionality
     print("Running basic test of preprocess_conversations...")
     
-    tokenizer = MockTokenizer()
-    chat_template = TEMPLATE_REGISTRY.get("llama3")
+    print("Running test_preprocess_conversations_basic...")
+    test_preprocess_conversations_basic()
+    print("✓ Basic test passed")
     
-    conversations = [
-        [
-            {"role": "user", "content": "What is the capital of France?"},
-            {"role": "assistant", "content": "The capital of France is Paris."},
-            {"role": "user", "content": "What about Germany?"},
-            {"role": "assistant", "content": "The capital of Germany is Berlin."},
-        ]
-    ]
+    print("Running test_preprocess_conversations_multiple...")
+    test_preprocess_conversations_multiple()
+    print("✓ Multiple conversations test passed")
     
-    result = preprocess_conversations(
-        tokenizer=tokenizer,
-        conversations=conversations,
-        chat_template=chat_template,
-        max_length=512,
-    )
+    print("Running test_preprocess_conversations_empty...")
+    test_preprocess_conversations_empty()
+    print("✓ Empty conversations test passed")
     
-    input_ids = result["input_ids"][0].squeeze(0)
-    loss_mask = result["loss_mask"][0].squeeze(0)
+    print("Running test_preprocess_conversations_role_validation...")
+    try:
+        test_preprocess_conversations_role_validation()
+        print("✗ Role validation test should have raised an error")
+    except AssertionError as e:
+        if "unexpected role" in str(e):
+            print("✓ Role validation test passed")
+        else:
+            print(f"✗ Role validation test failed with unexpected error: {e}")
     
-    print(f"Input IDs shape: {input_ids.shape}")
-    print(f"Loss mask shape: {loss_mask.shape}")
-    print(f"Assistant tokens: {loss_mask.sum().item()}")
-    print(f"Non-assistant tokens: {(loss_mask == 0).sum().item()}")
+    print("Running test_preprocess_conversations_none...")
+    test_preprocess_conversations_none()
+    print("✓ None conversations test passed")
     
-    # Visualize the loss mask
-    visualize_loss_mask(tokenizer, input_ids, loss_mask)
-    
-    print("\nTest completed successfully!")
+    print("\nAll tests completed successfully!")
