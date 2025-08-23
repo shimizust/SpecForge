@@ -368,38 +368,38 @@ if __name__ == "__main__":
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     chat_template = TEMPLATE_REGISTRY.get("qwen")
 
-    # Using conversations list
-    conversations = [
-        [
-            {"role": "user", "content": "What is 2+2?"},
-            {"role": "assistant", "content": "The answer is 4."},
-            {"role": "user", "content": "I don't think that's right"},
-            {"role": "assistant", "content": "I'm pretty sure it's 4."}
-        ],
-        [
-            {"role": "user", "content": "How do you boil water?"},
-            {"role": "assistant", "content": "Use a stove."}
-        ]
-    ]
-    results = preprocess_conversations(
-        tokenizer=tokenizer,
-        conversations=conversations,
-        chat_template=chat_template,
-        max_length=512,
-        is_preformatted=False
-    )
-    for i in range(len(results["input_ids"])):
-        visualize_loss_mask(tokenizer, results['input_ids'][i], results['loss_mask'][i])
+    # # Using conversations list
+    # conversations = [
+    #     [
+    #         {"role": "user", "content": "What is 2+2?"},
+    #         {"role": "assistant", "content": "The answer is 4."},
+    #         {"role": "user", "content": "I don't think that's right"},
+    #         {"role": "assistant", "content": "I'm pretty sure it's 4."}
+    #     ],
+    #     [
+    #         {"role": "user", "content": "How do you boil water?"},
+    #         {"role": "assistant", "content": "Use a stove."}
+    #     ]
+    # ]
+    # results = preprocess_conversations(
+    #     tokenizer=tokenizer,
+    #     conversations=conversations,
+    #     chat_template=chat_template,
+    #     max_length=512,
+    #     is_preformatted=False
+    # )
+    # for i in range(len(results["input_ids"])):
+    #     visualize_loss_mask(tokenizer, results['input_ids'][i], results['loss_mask'][i])
 
     # Using preformatted conversation
     preformatted_conversations = [
-        "<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat is 2+2?<|im_end|>\n<|im_start|>assistant\nThe answer is 4.<|im_end|>\n<|im_start|>user\nI don't think that's right<|im_end|>\n<|im_start|>assistant\n<think>\nI know 2+2 is 4</think>\n\nI'm pretty sure it's 4.<|im_end|>\n"
+        # "<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat is 2+2?<|im_end|>\n<|im_start|>assistant\nThe answer is 4.<|im_end|>\n<|im_start|>user\nI don't think that's right<|im_end|>\n<|im_start|>assistant\n<think>\nI know 2+2 is 4</think>\n\nI'm pretty sure it's 4.<|im_end|>\n",
     ]
     results = preprocess_conversations(
         tokenizer=tokenizer,
         conversations=preformatted_conversations,
         chat_template=chat_template,
-        max_length=512,
+        max_length=8192,
         is_preformatted=True
     )
     for i in range(len(results["input_ids"])):
