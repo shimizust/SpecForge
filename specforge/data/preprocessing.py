@@ -319,9 +319,9 @@ def build_eagle3_dataset(
         dataset: HF dataset to process.
         tokenizer: The tokenizer to use for tokenization.
         chat_template: The chat template to use for formatting conversations.
-                        This contains the user/assistant headers, system prompt and any special tokens
-                        required to delineate different parts of the conversation used
-                        to generate the loss mask.
+                        This includes the system prompt and user/assistant tokens
+                        required to delineate different parts of the conversation
+                        for loss mask generation.
         max_length: The maximum length of the tokenized input.
         shuffle_seed: The seed for shuffling the dataset.
         num_proc: The number of processes to use for multiprocessing.
@@ -329,7 +329,7 @@ def build_eagle3_dataset(
         cache_key: The key to use for caching the processed dataset.
         is_vlm: Whether the dataset is for VLM models.
         processor: The image processor to use for processing images.
-        is_preformatted: Whether the dataset contains pre-formatted text of the conversation
+        is_preformatted: Whether the dataset contains preformatted text of the conversation
                         (e.g. includes system prompt, user and assistant start and end tokens)
                         and doesn't need to have the chat template applied.
                         Note that the chat_template still needs to be specified to determine
@@ -367,12 +367,11 @@ def build_eagle3_dataset(
             )
         elif is_preformatted:
             # Handle pre-formatted text (should be in "text" column)
-            text_column = "text"
-            if text_column not in examples:
+            if "text" not in examples:
                 raise ValueError(f"Expected 'text' column for is_preformatted=True, but found columns: {list(examples.keys())}")
             processed = preprocess_conversations(
                 tokenizer,
-                examples[text_column],
+                examples["text"],
                 template,
                 max_length,
                 is_preformatted=True,
@@ -409,8 +408,6 @@ def build_eagle3_dataset(
     # adjust batch size based on dataset type
     if is_vlm:
         batch_size = 200  # reduce batch size for VLM datasets to avoid PyArrow offset overflow
-    elif is_preformatted:
-        batch_size = 2000  # pre-formatted text can handle larger batches
     else:
         batch_size = 1000  # default for conversations
     dataset = dataset.map(
