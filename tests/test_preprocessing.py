@@ -6,13 +6,13 @@ from unittest.mock import Mock, patch
 
 from specforge.data.preprocessing import preprocess_conversations
 from specforge.data.template import TEMPLATE_REGISTRY
-
+from transformers import AutoTokenizer
 
 class TestPreprocessConversations(unittest.TestCase):
     """Test suite for preprocess_conversations function."""
 
     def test_preprocess_conversations_basic(self):
-        """Test basic conversation preprocessing without requiring external models."""
+        """Test basic conversation preprocessing."""
         # Mock the tokenizer to avoid network calls
         with patch('transformers.AutoTokenizer.from_pretrained') as mock_tokenizer_class:
             # Create a mock tokenizer
@@ -80,8 +80,14 @@ class TestPreprocessConversations(unittest.TestCase):
                 ]
             ]
             
-            chat_template = TEMPLATE_REGISTRY.get("llama3")
-            
+            # Create example chat template
+            chat_template = ChatTemplate(
+                assistant_header="<|start_header_id|>assistant<|end_header_id|>\n\n",
+                user_header="<|start_header_id|>user<|end_header_id|>",
+                system_prompt="You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe.  Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature.\n\nIf a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information.",
+                end_of_turn_token="<|eot_id|>",
+            ),
+
             # Run the function
             result = preprocess_conversations(
                 tokenizer=mock_tokenizer,
@@ -299,27 +305,6 @@ class TestPreprocessConversations(unittest.TestCase):
             self.assertEqual(len(result["input_ids"]), 1)
 
 
-if __name__ == "__main__":
-    suite = unittest.TestSuite()
-    suite.addTest(TestPreprocessConversations('test_preprocess_conversations_basic'))
-    suite.addTest(TestPreprocessConversations('test_preprocess_conversations_multiple'))
-    suite.addTest(TestPreprocessConversations('test_preprocess_conversations_empty'))
-    suite.addTest(TestPreprocessConversations('test_preprocess_conversations_role_validation'))
-    suite.addTest(TestPreprocessConversations('test_preprocess_conversations_none'))
-    
-    runner = unittest.TextTestRunner(verbosity=2)
-    result = runner.run(suite)
-    
-    if result.wasSuccessful():
-        print("\n✅ All tests passed!")
-    else:
-        print(f"\n❌ {len(result.failures)} test(s) failed, {len(result.errors)} error(s)")
-        for failure in result.failures:
-            print(f"FAILED: {failure[0]}")
-        for error in result.errors:
-            print(f"ERROR: {error[0]}")
-
-
 # Additional utility function for visual debugging (similar to the VLM test)
 def visualize_loss_mask(tokenizer, input_ids, loss_mask):
     """Utility function to visualize which tokens contribute to loss."""
@@ -331,6 +316,12 @@ def visualize_loss_mask(tokenizer, input_ids, loss_mask):
     print("RED = Non-assistant tokens (loss_mask = 0)")
     print("GREEN = Assistant tokens (loss_mask = 1)")
     print("-" * 50)
+    
+    # Handle both 1D and 2D tensors - flatten if needed
+    if input_ids.dim() > 1:
+        input_ids = input_ids.flatten()
+    if loss_mask.dim() > 1:
+        loss_mask = loss_mask.flatten()
     
     if len(input_ids) == 0 or len(loss_mask) == 0:
         print("Empty input")
@@ -365,3 +356,39 @@ def visualize_loss_mask(tokenizer, input_ids, loss_mask):
         else:
             print(f"{GREEN}{decoded_text}{RESET}")
     print("\n" + "-" * 50)
+
+
+if __name__ == "__main__":
+    # Run unit tests
+    # unittest.main(verbosity=2)
+
+    # Visualize loss mask for conversations
+    # model_path = "Qwen/Qwen3-4B"
+    model_path = "/shared/public/elr-models/Qwen/Qwen3-4B/1cfa9a7208912126459214e8b04321603b3df60c"
+    tokenizer = AutoTokenizer.from_pretrained(model_path)
+    chat_template = TEMPLATE_REGISTRY.get("qwen")
+
+    conversations = [
+        [
+            {"role": "user", "content": "What is 2+2?"},
+            {"role": "assistant", "content": "The answer is 4."},
+        ]
+    ]
+    results = preprocess_conversations(
+        tokenizer=tokenizer,
+        conversations=conversations,
+        chat_template=chat_template,
+        max_length=512,
+        is_preformatted=False
+    )
+    
+    # Debug: print the loss mask values
+    print("Loss mask values:", results['loss_mask'][0].flatten().tolist())
+    print("Sum of loss mask:", results['loss_mask'][0].sum().item())
+    
+    visualize_loss_mask(tokenizer, results['input_ids'][0], results['loss_mask'][0])
+    
+
+
+
+

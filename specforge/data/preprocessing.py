@@ -124,7 +124,6 @@ def preprocess_conversations(
             - loss_mask: List of loss masks indicating which tokens should contribute to the loss.
             - attention_mask: List of attention masks.
     """
-    system_prompt = chat_template.system_prompt
 
     # prepare result
     results = {"input_ids": [], "loss_mask": [], "attention_mask": []}
@@ -135,9 +134,11 @@ def preprocess_conversations(
             continue
 
         if is_preformatted:
-            # source is already a formatted text string
+            # source is already a formatted text string with chat template applied
             conversation = source
         else:
+            system_prompt = chat_template.system_prompt
+
             # source is a list of conversation messages, need to format
             messages = [{"role": "system", "content": system_prompt}]
             
