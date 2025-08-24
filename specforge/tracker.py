@@ -248,10 +248,6 @@ class MLflowTracker(Tracker):
             )
         
         # Set experiment name from environment variable if not explicitly provided
-        if args.mlflow_experiment_name is None and "MLFLOW_EXPERIMENT_NAME" in os.environ:
-            args.mlflow_experiment_name = os.environ["MLFLOW_EXPERIMENT_NAME"]
-
-        # Set experiment name from environment variable if not explicitly provided
         if (
             args.mlflow_experiment_name is None
             and "MLFLOW_EXPERIMENT_NAME" in os.environ
