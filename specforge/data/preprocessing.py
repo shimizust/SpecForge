@@ -54,7 +54,6 @@ def _apply_loss_mask_from_chat_template(
     text: str,
     offsets: torch.Tensor,
     chat_template: ChatTemplate,
-    debug: bool = False,
 ) -> torch.Tensor:
     """
     Apply loss mask to identify assistant response spans using chat template.
@@ -63,7 +62,6 @@ def _apply_loss_mask_from_chat_template(
         text: The formatted conversation text.
         offsets: Token offset mapping from tokenizer.
         chat_template: The chat template to use for identifying assistant spans.
-        debug: Whether to print debug information.
         
     Returns:
         A tensor indicating which tokens should contribute to the loss (1) or not (0).
@@ -76,55 +74,29 @@ def _apply_loss_mask_from_chat_template(
     assistant_message_separator = (
         f"{chat_template.end_of_turn_token}{chat_template.assistant_header}"
     )
+    # user_message_separator = chat_template.user_header
+    # assistant_message_separator = chat_template.assistant_header
 
-    if debug:
-        print(f"DEBUG: Chat template components:")
-        print(f"  assistant_header: {repr(chat_template.assistant_header)}")
-        print(f"  user_header: {repr(chat_template.user_header)}")
-        print(f"  end_of_turn_token: {repr(chat_template.end_of_turn_token)}")
-        print(f"  user_message_separator: {repr(user_message_separator)}")
-        print(f"  assistant_message_separator: {repr(assistant_message_separator)}")
 
     # Find spans of assistant responses using regex
     # Pattern 1: Assistant responses that follow the normal pattern (preceded by end_of_turn)
-    assistant_pattern_normal = (
+    assistant_pattern = (
         re.escape(assistant_message_separator)
         + r"(.*?)(?="
         + re.escape(user_message_separator)
         + "|$)"
     )
     
-    # Pattern 2: Assistant responses that appear without preceding end_of_turn (e.g., at start)
-    assistant_pattern_start = (
-        re.escape(chat_template.assistant_header)
-        + r"(.*?)(?="
-        + re.escape(user_message_separator)
-        + "|$)"
-    )
-    
-    if debug:
-        print(f"DEBUG: Assistant pattern (normal): {repr(assistant_pattern_normal)}")
-        print(f"DEBUG: Assistant pattern (start): {repr(assistant_pattern_start)}")
-        print(f"DEBUG: Text preview (first 500 chars): {repr(text[:500])}")
-        print(f"DEBUG: Text length: {len(text)}")
-    
     matches_found = 0
     
     # First try the normal pattern
-    for match in re.finditer(assistant_pattern_normal, text, re.DOTALL):
+    for match in re.finditer(assistant_pattern, text, re.DOTALL):
         matches_found += 1
         # Assistant response text span (excluding assistant_header itself)
         assistant_start_char = match.start(1)
         assistant_end_char = match.end(1)
-        
-        if debug:
-            print(f"DEBUG: Normal Match {matches_found}:")
-            print(f"  Match span: {match.start()}-{match.end()}")
-            print(f"  Assistant content span: {assistant_start_char}-{assistant_end_char}")
-            print(f"  Assistant content preview: {repr(text[assistant_start_char:assistant_start_char+100])}")
 
         # Mark tokens overlapping with assistant response
-        tokens_marked = 0
         for idx, (token_start, token_end) in enumerate(offsets):
             # Token is part of the assistant response span
             if token_end <= assistant_start_char:
@@ -132,45 +104,13 @@ def _apply_loss_mask_from_chat_template(
             if token_start > assistant_end_char:
                 continue  # token after assistant text
             loss_mask[idx] = 1
-            tokens_marked += 1
-        
-        if debug:
-            print(f"  Tokens marked for loss: {tokens_marked}")
     
-    # Then try the start pattern (only if no normal matches found)
     if matches_found == 0:
-        for match in re.finditer(assistant_pattern_start, text, re.DOTALL):
-            matches_found += 1
-            # Assistant response text span (excluding assistant_header itself)
-            assistant_start_char = match.start(1)
-            assistant_end_char = match.end(1)
-            
-            if debug:
-                print(f"DEBUG: Start Match {matches_found}:")
-                print(f"  Match span: {match.start()}-{match.end()}")
-                print(f"  Assistant content span: {assistant_start_char}-{assistant_end_char}")
-                print(f"  Assistant content preview: {repr(text[assistant_start_char:assistant_start_char+100])}")
-
-            # Mark tokens overlapping with assistant response
-            tokens_marked = 0
-            for idx, (token_start, token_end) in enumerate(offsets):
-                # Token is part of the assistant response span
-                if token_end <= assistant_start_char:
-                    continue  # token before assistant text
-                if token_start > assistant_end_char:
-                    continue  # token after assistant text
-                loss_mask[idx] = 1
-                tokens_marked += 1
-            
-            if debug:
-                print(f"  Tokens marked for loss: {tokens_marked}")
-    
-    if debug:
-        print(f"DEBUG: Total assistant matches found: {matches_found}")
-        print(f"DEBUG: Total tokens with loss mask: {loss_mask.sum().item()}")
-        print(f"DEBUG: Total tokens: {len(loss_mask)}")
+        print("WARNING: No assistant response spans found in the conversation text.")
     
     return loss_mask
+
+
 # Copied from https://github.com/SafeAILab/EAGLE/blob/main/eagle/traineagle3/cnets.py
 def preprocess_conversations(
     tokenizer: PreTrainedTokenizer,
@@ -200,10 +140,7 @@ def preprocess_conversations(
     # prepare result
     results = {"input_ids": [], "loss_mask": [], "attention_mask": []}
 
-    print("Got here, in preprocess_conversations")
-    print(f"Number of conversations to process: {len(conversations)}")
     for source in conversations:
-        print("Got here in source in conversations")
         if not source:
             # if the source is None, skip it
             continue
@@ -247,12 +184,9 @@ def preprocess_conversations(
         input_ids = encoding.input_ids[0]
         offsets = encoding.offset_mapping[0]
         
-        # Apply loss mask using shared logic
-        # Enable debug for first example only
-        debug_mode = len(results["input_ids"]) == 0
-        print(f"****Got here")
+        # Apply loss mask
         loss_mask = _apply_loss_mask_from_chat_template(
-            conversation, offsets, chat_template, debug=debug_mode
+            conversation, offsets, chat_template
         )
 
         results["input_ids"].append(input_ids[None, :])
@@ -364,11 +298,9 @@ def preprocess_vlm_conversations(
             encoding.input_ids[0], skip_special_tokens=False
         )
 
-        # Apply loss mask using shared logic
-        # Enable debug for first example only
-        debug_mode = len(results["input_ids"]) == 0
+        # Apply loss mask
         loss_mask = _apply_loss_mask_from_chat_template(
-            decoded_conversation, offsets, chat_template, debug=debug_mode
+            decoded_conversation, offsets, chat_template
         )
 
         results["input_ids"].append(input_ids[None, :])
@@ -446,8 +378,6 @@ def build_eagle3_dataset(
                 max_length,
             )
         elif is_preformatted:
-            print(f"Got here, in preprocess_function, is_preformatted=True")
-            print(f"len of examples: {len(examples)}")
             # Handle pre-formatted text (should be in "text" column)
             if "text" not in examples:
                 raise ValueError(f"Expected 'text' column for is_preformatted=True, but found columns: {list(examples.keys())}")

@@ -5,7 +5,7 @@ import os
 from unittest.mock import Mock, patch
 
 from specforge.data.preprocessing import preprocess_conversations
-from specforge.data.template import TEMPLATE_REGISTRY
+from specforge.data.template import TEMPLATE_REGISTRY, ChatTemplate
 from transformers import AutoTokenizer
 
 class TestPreprocessConversations(unittest.TestCase):
@@ -360,13 +360,13 @@ def visualize_loss_mask(tokenizer, input_ids, loss_mask):
 
 if __name__ == "__main__":
     # Run unit tests
-    # unittest.main(verbosity=2)
+    unittest.main(verbosity=2)
 
-    # Visualize loss mask for conversations
-    # model_path = "Qwen/Qwen3-4B"
-    model_path = "/shared/public/elr-models/Qwen/Qwen3-4B/1cfa9a7208912126459214e8b04321603b3df60c"
-    tokenizer = AutoTokenizer.from_pretrained(model_path)
-    chat_template = TEMPLATE_REGISTRY.get("qwen")
+    # # Visualize loss mask for conversations
+    # # model_path = "Qwen/Qwen3-4B"
+    # model_path = "/shared/public/elr-models/Qwen/Qwen3-4B/1cfa9a7208912126459214e8b04321603b3df60c"
+    # tokenizer = AutoTokenizer.from_pretrained(model_path)
+    # chat_template = TEMPLATE_REGISTRY.get("qwen")
 
     # # Using conversations list
     # conversations = [
@@ -391,19 +391,19 @@ if __name__ == "__main__":
     # for i in range(len(results["input_ids"])):
     #     visualize_loss_mask(tokenizer, results['input_ids'][i], results['loss_mask'][i])
 
-    # Using preformatted conversation
-    preformatted_conversations = [
-        # "<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat is 2+2?<|im_end|>\n<|im_start|>assistant\nThe answer is 4.<|im_end|>\n<|im_start|>user\nI don't think that's right<|im_end|>\n<|im_start|>assistant\n<think>\nI know 2+2 is 4</think>\n\nI'm pretty sure it's 4.<|im_end|>\n",
-    ]
-    results = preprocess_conversations(
-        tokenizer=tokenizer,
-        conversations=preformatted_conversations,
-        chat_template=chat_template,
-        max_length=8192,
-        is_preformatted=True
-    )
-    for i in range(len(results["input_ids"])):
-        visualize_loss_mask(tokenizer, results['input_ids'][i], results['loss_mask'][i])
+    # # Using preformatted conversation
+    # preformatted_conversations = [
+    #     "<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat is 2+2?<|im_end|>\n<|im_start|>assistant\nThe answer is 4.<|im_end|>\n<|im_start|>user\nI don't think that's right<|im_end|>\n<|im_start|>assistant\n<think>\nI know 2+2 is 4</think>\n\nI'm pretty sure it's 4.<|im_end|>\n",
+    # ]
+    # results = preprocess_conversations(
+    #     tokenizer=tokenizer,
+    #     conversations=preformatted_conversations,
+    #     chat_template=chat_template,
+    #     max_length=512,
+    #     is_preformatted=True
+    # )
+    # for i in range(len(results["input_ids"])):
+    #     visualize_loss_mask(tokenizer, results['input_ids'][i], results['loss_mask'][i])
 
 
 
