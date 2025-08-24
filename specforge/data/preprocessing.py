@@ -78,7 +78,6 @@ def _apply_loss_mask_from_chat_template(
     )
 
     # Find spans of assistant responses using regex
-    # Pattern 1: Assistant responses that follow the normal pattern (preceded by end_of_turn)
     assistant_pattern = (
         re.escape(assistant_message_separator)
         + r"(.*?)(?="
@@ -88,7 +87,6 @@ def _apply_loss_mask_from_chat_template(
 
     matches_found = 0
 
-    # First try the normal pattern
     for match in re.finditer(assistant_pattern, text, re.DOTALL):
         matches_found += 1
         # Assistant response text span (excluding assistant_header itself)
