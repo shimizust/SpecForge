@@ -151,7 +151,7 @@ If you already have conversations formatted with a specific chat template, you c
 
 This format is useful when you have pre-formatted prompts that were used during training of the target model and have raw generations from the target model.
 
-To use pre-formatted datasets, add the `--is-preformatted` flag to your training command. Note that the `--chat-template` parameter is still needed and should match the template used in your pre-formatted text, as it is used to identify user/assistant tokens for generating the loss mask.
+To use pre-formatted datasets, add the `--is-preformatted` flag to your training command. Note that the `--chat-template` parameter is still needed and should match the template used in your pre-formatted text, as it is used to identify user/assistant tokens to determine the assistant spans and generate the corresponding loss mask.
 
 ```bash
 torchrun --standalone --nproc_per_node 8 \
