@@ -246,7 +246,7 @@ class MLflowTracker(Tracker):
             print(
                 "Warning: MLflow tracking URI not set. Defaulting to local './mlruns'."
             )
-        
+
         # Set experiment name from environment variable if not explicitly provided
         if (
             args.mlflow_experiment_name is None

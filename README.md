@@ -144,7 +144,7 @@ If you already have conversations formatted with a specific chat template, you c
 
 ```json
 {
-    "id": "xxxx", 
+    "id": "xxxx",
     "text": "<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n<|im_start|>user\nHello<|im_end|>\n<|im_start|>assistant\nHi there!<|im_end|>\n"
 }
 ```

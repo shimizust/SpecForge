@@ -67,7 +67,11 @@ def parse_args():
     parser.add_argument("--attention-backend", type=str, default="flex_attention")
     # data processing type
     parser.add_argument("--chat-template", type=str, default="llama3")
-    parser.add_argument("--is-preformatted", action="store_true", help="Whether the input data is preformatted text with the chat template already applied to the conversation messages.")
+    parser.add_argument(
+        "--is-preformatted",
+        action="store_true",
+        help="Whether the input data is preformatted text with the chat template already applied to the conversation messages.",
+    )
 
     # distributed training
     parser.add_argument("--tp-size", type=int, default=1)

@@ -33,6 +33,7 @@ from transformers import ImageProcessingMixin, PreTrainedTokenizer
 
 try:
     from qwen_vl_utils import process_vision_info
+
     HAS_QWEN_VL_UTILS = True
 except ImportError:
     HAS_QWEN_VL_UTILS = False
@@ -50,6 +51,7 @@ Conversation = List[Dict[str, str]]
 # This file is for preprocessing the data
 # ==============================
 
+
 def _apply_loss_mask_from_chat_template(
     text: str,
     offsets: torch.Tensor,
@@ -57,17 +59,17 @@ def _apply_loss_mask_from_chat_template(
 ) -> torch.Tensor:
     """
     Apply loss mask to identify assistant response spans using chat template.
-    
+
     Args:
         text: The formatted conversation text.
         offsets: Token offset mapping from tokenizer.
         chat_template: The chat template to use for identifying assistant spans.
-        
+
     Returns:
         A tensor indicating which tokens should contribute to the loss (1) or not (0).
     """
     loss_mask = torch.zeros(len(offsets), dtype=torch.long)
-    
+
     user_message_separator = (
         f"{chat_template.end_of_turn_token}{chat_template.user_header}"
     )
@@ -83,9 +85,9 @@ def _apply_loss_mask_from_chat_template(
         + re.escape(user_message_separator)
         + "|$)"
     )
-    
+
     matches_found = 0
-    
+
     # First try the normal pattern
     for match in re.finditer(assistant_pattern, text, re.DOTALL):
         matches_found += 1
@@ -101,10 +103,10 @@ def _apply_loss_mask_from_chat_template(
             if token_start > assistant_end_char:
                 continue  # token after assistant text
             loss_mask[idx] = 1
-    
+
     if matches_found == 0:
         print("WARNING: No assistant response spans found in the conversation text.")
-    
+
     return loss_mask
 
 
@@ -121,7 +123,7 @@ def preprocess_conversations(
 
     Args:
         tokenizer: The tokenizer to use for tokenization.
-        conversations: A list of conversations (if is_preformatted=False) or 
+        conversations: A list of conversations (if is_preformatted=False) or
                       a list of pre-formatted text strings (if is_preformatted=True).
         chat_template: The chat template to use for formatting/identifying spans.
         max_length: The maximum length of the tokenized input.
@@ -150,7 +152,7 @@ def preprocess_conversations(
 
             # source is a list of conversation messages, need to format
             messages = [{"role": "system", "content": system_prompt}]
-            
+
             if source[0]["role"] != "user":
                 # if the first message is not from user, skip it
                 source = source[1:]
@@ -180,7 +182,7 @@ def preprocess_conversations(
         )
         input_ids = encoding.input_ids[0]
         offsets = encoding.offset_mapping[0]
-        
+
         # Apply loss mask
         loss_mask = _apply_loss_mask_from_chat_template(
             conversation, offsets, chat_template
@@ -351,15 +353,15 @@ def build_eagle3_dataset(
     """
     if is_vlm:
         assert processor is not None, "processor must be provided when is_vlm is True"
-    
+
     # Validate chat_template requirement
     if chat_template is None:
         raise ValueError("chat_template must be provided for all dataset types")
-    
+
     assert (
         chat_template in TEMPLATE_REGISTRY.get_all_template_names()
     ), f"Chat template {chat_template} not found in TEMPLATE_REGISTRY, you may need to register it first"
-    
+
     template: ChatTemplate = TEMPLATE_REGISTRY.get(chat_template)
 
     dataset = dataset.shuffle(seed=shuffle_seed)
@@ -377,7 +379,9 @@ def build_eagle3_dataset(
         elif is_preformatted:
             # Handle pre-formatted text (should be in "text" column)
             if "text" not in examples:
-                raise ValueError(f"Expected 'text' column for is_preformatted=True, but found columns: {list(examples.keys())}")
+                raise ValueError(
+                    f"Expected 'text' column for is_preformatted=True, but found columns: {list(examples.keys())}"
+                )
             processed = preprocess_conversations(
                 tokenizer,
                 examples["text"],
@@ -388,7 +392,9 @@ def build_eagle3_dataset(
         else:
             # Handle ShareGPT conversations
             if "conversations" not in examples:
-                raise ValueError(f"Expected 'conversations' column for is_preformatted=False, but found columns: {list(examples.keys())}")
+                raise ValueError(
+                    f"Expected 'conversations' column for is_preformatted=False, but found columns: {list(examples.keys())}"
+                )
             processed = preprocess_conversations(
                 tokenizer,
                 examples["conversations"],
@@ -396,7 +402,7 @@ def build_eagle3_dataset(
                 max_length,
                 is_preformatted=False,
             )
-        
+
         return processed
 
     # Process dataset only once
@@ -416,7 +422,9 @@ def build_eagle3_dataset(
 
     # adjust batch size based on dataset type
     if is_vlm:
-        batch_size = 200  # reduce batch size for VLM datasets to avoid PyArrow offset overflow
+        batch_size = (
+            200  # reduce batch size for VLM datasets to avoid PyArrow offset overflow
+        )
     else:
         batch_size = 1000  # default for conversations
     dataset = dataset.map(
