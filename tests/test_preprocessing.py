@@ -66,7 +66,6 @@ def visualize_loss_mask(tokenizer, input_ids, loss_mask):
 if __name__ == "__main__":
     # Visualize loss mask for conversations
     model_path = "Qwen/Qwen3-4B"
-    model_path = "/shared/public/elr-models/Qwen/Qwen3-4B/1cfa9a7208912126459214e8b04321603b3df60c"
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     chat_template = TEMPLATE_REGISTRY.get("qwen")
 
